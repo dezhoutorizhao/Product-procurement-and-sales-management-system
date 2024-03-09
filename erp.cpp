@@ -49,7 +49,7 @@ string base64_encode(const string &in)
         char_array_4[2] = ((char_array_3[1] & 0x0F) << 2) + ((char_array_3[2] & 0xC0) >> 6);
         char_array_4[3] = char_array_3[2] & 0x3F;
 
-        cout << char_array_3[0] << char_array_3[1] << char_array_3[2] << endl;
+        // cout << char_array_3[0] << char_array_3[1] << char_array_3[2] << endl;
 
         for (int i = 0; i < 4; i++)
         {
@@ -57,7 +57,7 @@ string base64_encode(const string &in)
         }
     }
 
-    cout << out << endl;
+    // cout << out << endl;
 
     return out;
 }
@@ -238,51 +238,45 @@ Status ListUpdate_L(LinkList &L, int i)
 }
 
 // 从文件中读取家电信息并显示
+// 从文件中读取家电信息并显示
 LinkList displayinfo(LinkList head)
 {
-    FILE *fp;                  // 定义文件指针变量fp
-    house *s;                  // 定义house结构体指针变量s
-    LNode *p, *q;              // 定义LNode结构体指针变量p和q
-    p = head;                  // 将head赋值给p
-    fp = fopen("1.txt", "rb"); // 打开名为"1.txt"的文件，以二进制只读方式打开，并将文件指针赋值给fp
-    if (!fp)                   // 如果文件打开失败
+    std::ifstream fin("1.txt", std::ios::in); // 以输入模式打开文件
+    if (!fin.is_open())                       // 如果文件打开失败
     {
-        printf("没有相应的家电信息！"); // 输出提示信息
+        std::cout << "没有相应的家电信息！" << std::endl; // 输出提示信息
+        return head;                                       // 返回原链表
     }
-    else // 如果文件打开成功
-    {
-        s = (house *)malloc(sizeof(house));                           // 分配一个house结构体大小的内存空间，并将其地址赋值给s
-        printf("家电编号\t家电名称\t家电品牌\t家电价格\t家电数量\n"); // 输出表头信息
-        while (!feof(fp))                                             // 当文件指针未到达文件末尾时循环执行
-        {
-            memset(s, 0, sizeof(house));
-            if (fread(s, sizeof(struct houses), 1, fp) != 0) // 从文件中读取一个house大小的数据到s所指向的内存空间，并返回成功读取的数据个数，如果读取成功
-            {
-                printf("%d\t%s\t%s\t", s->id, base64_decode(s->name1).c_str(), base64_decode(s->name2).c_str()); // 输出家电信息
-                cout << s->price << "\t" << s->count << endl;
-                q = (LNode *)malloc(sizeof(LNode)); // 分配一个LNode结构体大小的内存空间，并将其地址赋值给q
-                q->data.id = s->id;                 // 将s的id赋值给q的data的id
-                // cout << 333 << endl;
-                q->data.name1 = base64_decode(s->name1).c_str(); // 将s的name1复制给q的data的name1
-                q->data.name2 = base64_decode(s->name2).c_str(); // 将s的name2复制给q的data的name2
-                // cout << 444 << endl;
-                q->data.price = s->price; // 将s的price复制给q的data的price
-                q->data.count = s->count; // 将s的count赋值给q的data的count
-                // cout << "这是" << q->data.name1 << endl;
 
-                // cout << s -> name1 << ' ' << q->data.name1 << endl;
-                // cout << 222 << endl;
-                // q->data.name1 = base64_decode(q->data.name1).c_str();
-                // q->data.name2 = base64_decode(q->data.name2).c_str();
-                // q->data.price = base64_decode(q->data.price).c_str();
-                p->next = q; // 将q赋值给p的next指针
-                p = p->next; // 将p指向下一个节点
-            }
+    LNode *p, *q;      // 定义LNode结构体指针变量p和q
+    p = head;          // 将head赋值给p
+
+    std::cout << "家电编号\t家电名称\t家电品牌\t家电价格\t家电数量" << std::endl; // 输出表头信息
+
+    while (!fin.eof()) // 当文件指针未到达文件末尾时循环执行
+    {
+        house *s = new house; // 分配一个house结构体大小的内存空间，并将其地址赋值给s
+        fin >> s->id >> s->name1 >> s->name2 >> s->price >> s->count; // 从文件中读取家电信息
+
+        if (fin.eof()) { // 如果已经到达文件末尾，则释放内存并跳出循环
+            delete s;
+            break;
         }
-        fclose(fp); // 关闭文件
+
+        std::cout << s->id << "\t" << base64_decode(s->name1) << "\t" << base64_decode(s->name2) << "\t" << s->price << "\t" << s->count << std::endl; // 输出家电信息
+
+        q = new LNode; // 分配一个LNode结构体大小的内存空间，并将其地址赋值给q
+        q->data = *s;  // 将s所指向的内存中的数据复制到q的data中
+        p->next = q;   // 将q赋值给p的next指针
+        p = p->next;   // 将p指向下一个节点
+
+        delete s; // 释放s所指向的内存空间
     }
+
+    fin.close(); // 关闭文件
     return head; // 返回head
 }
+
 
 // 家电出库
 Status Outbound(LinkList &L, int id, int count)
@@ -372,34 +366,23 @@ void sortByPrice(LinkList &L)
 
 void Save(LinkList &L)
 {
-    FILE *fp;
-    house *s;
-    fp = fopen("1.txt", "w");
-    if (!fp)
-        printf("打开文件失败！");
-    else
+    std::ofstream fout("1.txt", std::ios::out); // 以输出模式打开文件，会自动创建文件
+    if (!fout.is_open())
     {
-        LinkList p;
-        s = (houses *)malloc(sizeof(houses));
-        p = L->next;
-        while (p)
-        {
-            memset(s, 0, sizeof(house));
-            s->id = p->data.id;
-            // s->name1=p->data.name1;
-            // s->name2=(p->data.name2);
-            // s->price=(p->data.price);
-
-            s->name1 = base64_encode(p->data.name1).c_str();
-            s->name2 = base64_encode(p->data.name2).c_str();
-            s->price = p->data.price;
-            s->count = p->data.count;
-            fwrite(s, sizeof(struct houses), 1, fp);
-            p = p->next;
-        }
-        printf("存储数据成功！\n");
+        std::cout << "打开文件失败！" << std::endl;
+        return;
     }
-    fclose(fp);
+
+    LinkList p = L->next;
+    while (p)
+    {
+        // 将数据以 UTF-8 编码保存到文件中
+        fout << p->data.id << " " << base64_encode(p->data.name1) << " " << base64_encode(p->data.name2) << " " << p->data.price << " " << p->data.count << std::endl;
+        p = p->next;
+    }
+
+    fout.close();
+    std::cout << "存储数据成功！" << std::endl;
 }
 
 int main()
